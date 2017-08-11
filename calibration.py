@@ -11,7 +11,7 @@ import fnmatch
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-from sys import platform
+import sys
 from matplotlib.ticker import AutoMinorLocator
 
 
@@ -19,21 +19,27 @@ linear_pol_extension = 'polarizer_only'  # folder for linear pol data
 qwp_R = 'qwp_R'  # folder for qwp at first configuration
 qwp_L = 'qwp_L'  # folder for qwp at second configuration
 
-partial_pol = 'partial_pol3'  # folder location of partial pol data
-
-comparison = 'polarimeter_comparison'  # folder for comparing polarimeter data
+partial_pol = 'partial_pol8'  # folder location of partial pol data
 
 power_meter_error = 0.001 #Error in power meter reading from ambient light, unit in mW
 
+data_dir = 'acquisition\data\calibration1'
 
-#if 'linux' in platform:
-#    os.chdir('acquisition/data/calibration6')
-#else:
-#    os.chdir('acquisition\data\calibration6')
+<<<<<<< HEAD
+if 'linux' in sys.platform:
+    data_dir = 'acquisition/data/calibration6'
+else:
+    data_dir = 'acquisition\data\calibration6'
+=======
+if 'linux' in platform:
+    os.chdir('acquisition/data/calibration4')
+else:
+    os.chdir(data_dir)
 
-data_dir = 'acquisition\data\calibration4'
+>>>>>>> 2c3fb4f6f749c296469a35da75ed5f78cfab75e7
 
-os.chdir(data_dir)
+
+#os.chdir(data_dir)
 
 
 #%% Collect some error analysis functions
@@ -215,40 +221,90 @@ pd_errs = np.vstack((pd1_voltage_err,pd2_voltage_err,pd3_voltage_err,pd4_voltage
 angles = np.array(angles)
 inc_powers = np.array(inc_powers)
 
-# define a fitting function
-def fit_function(theta, a, b, c):
-    return a + b*np.cos(2*theta*np.pi/180) + c*np.sin(2*theta*np.pi/180)
 
-plt.figure
-plt.yticks([]) # y units are arbitrary, so no ticks
+#%% Now plot linear polarization cal data
 
-thetas = np.linspace(0, 180, 1000)
-fit_errs=[]
-# for photodiodes 1-4, fit data and store fitting parameters
-for i in range(0,4):
-    x = angles
-    y = pd_voltages[i, :]
-    err = pd_errs[i, :]
-    popt, variance = curve_fit(fit_function, x, y)  # fit a curve
+# define a function to plot the resulting graph
+def linear_cal_fig(axes, yerror, xdata, ydata, min_angle, max_angle):
     
-    #standard error, assuming that the fit parameters are uncorrelated between each other
-    standard_err = np.sqrt(np.diag(variance))
-    fit_errs.append(standard_err)
+    # define a fitting function
+    def fit_function(theta, a, b, c):
+        return a + b*np.cos(2*theta*np.pi/180) + c*np.sin(2*theta*np.pi/180)
     
-    plt.plot(thetas, fit_function(thetas, *popt), linewidth=0.5)
-    plt.errorbar(x, y, fmt=" ", yerr=err)
+    axes.set_yticks([]) # y units are arbitrary, so no ticks
     
-    # store the fits as anonymous functions
-    fit_functions.append(lambda theta: fit_function(theta, *popt))
-    fit_parameters.append(popt)
-    variances.append(variance)
+    fit_errs=[]
+    fit_functions=[]
+    # for photodiodes 1-4, fit data and store fitting parameters
+    for i in range(0,4):
+        x = xdata
+        y = ydata[i, :]
+        popt, variance = curve_fit(fit_function, x, y)  # fit a curve
+
+        #standard error, assuming that the fit parameters are uncorrelated between each other
+        standard_err = np.sqrt(np.diag(variance))
+        fit_errs.append(standard_err)
+        
+        # store the fits as anonymous functions
+        fit_functions.append(lambda theta: fit_function(theta, *popt))
+        fit_parameters.append(popt)
+        variances.append(variance)
+
+    fit_errs=np.array(fit_errs)
+    
+    # now clip data at min and max angles
+    mask = np.where((xdata>=min_angle) & (xdata<=max_angle))
+    xdata = xdata[mask]
+    ydata = ydata[:, mask]
+    yerror = yerror[:, mask]
+    thetas = np.linspace(min_angle, max_angle, 1000)        
+    colors = [(0, 0, 1, 0.5), (0, 0, 0, 0.5), (0, 0.5, 0.25, 0.5), (0.5, 0, 0.5, 0.5)]    
+        
+    for i in range(0, 4):
+        err = np.transpose(yerror[i, :])
+        y = np.transpose(ydata[i, :])
+        axes.plot(thetas, fit_function(thetas, *fit_parameters[i]), linewidth=1.5, color = colors[i], label='PD #' + str(i+1))
+        axes.errorbar(xdata, y, fmt=" ", yerr=err, markersize = 6, ecolor = 'r', color = 'r', capsize=2.5, elinewidth=2.5) 
+        print(fit_parameters[i])
+        
+    axes.legend(prop={'size': 9})
+    axes.set_ylim([0, 1.02*np.max(pd_voltages)])
+    axes.set_xlim([min_angle, max_angle])
+    minor_locatorx = AutoMinorLocator(2)
+    minor_locatory = AutoMinorLocator(2)
+
+    axes.xaxis.set_minor_locator(minor_locatorx)
+    axes.yaxis.set_minor_locator(minor_locatory)
+
+    major_length = 7
+    major_width = 1.5
+    minor_length = 5
+    minor_width = 1.5    
+
+    axes.tick_params(axis='x', labelsize = 14, direction='in', length = major_length, width=major_width, which = 'major', top='off', color='k')
+    axes.tick_params(axis='x', labelsize = 14, direction='in', length = minor_length, width=minor_width, which = 'minor', top='off', color='k')
+    axes.tick_params(axis='y', labelsize = 14, direction='in', length = major_length, width=major_width, which = 'major', top='off', color='k')
+    axes.tick_params(axis='y', labelsize = 14, direction='in', length = minor_length, width=minor_width, which = 'minor', top='off', color='k')
+    axes.set_xlim([min_angle, max_angle])
+    return fit_errs
+
+
+save_fig = 1
+
+# now plot it
+min_angle = 0
+max_angle = 180
+fig = plt.figure()
+ax = plt.gca()
+fit_errs = linear_cal_fig(ax, pd_errs, angles, pd_voltages, min_angle, max_angle)
+
+if save_fig:
+    file_name = 'linear_cal.svg'
+    os.chdir('../../../../Graphics')
+    plt.savefig(file_name, format='svg')
+    os.chdir('..\\' + data_dir + '\\' + linear_pol_extension)
+
 plt.show()
-fit_errs=np.array(fit_errs)
-fit_parameters=np.array(fit_parameters)
-
-print('Fit Standard Errors')
-print(fit_errs)
-print('')
 
 #%% move onto the qwpR part of the calibration
 
@@ -597,27 +653,40 @@ def partial_pol_fig(axes, yerror, xdata, ydata, min_angle, max_angle):
     axes.set_xlim([min_angle, max_angle])
 
       
-    
+#%% Now plot the data    
 
 
 # plot points and error bars over whole range first
 plt.figure(3)
 
+N = 3 # take every Nth datapoint
+save_fig = 1 # if 1, save the figures
+
 min_angle= 0
-max_angle = 360
-partial_pol_fig(plt.gca(), partial_dops_err, pol_angles2, partial_dops, min_angle, max_angle)
-file_name = 'partial_pol.svg'
-os.chdir('../../../../Graphics')
-plt.savefig(file_name, format='svg')
-os.chdir('..\\' + data_dir + '\\' + partial_pol)
-plt.show()
+max_angle = 90
+partial_pol_fig(plt.gca(), partial_dops_err[::N], pol_angles2[::N], partial_dops[::N], min_angle, max_angle)
+
+if save_fig:
+    file_name = 'partial_pol.svg'
+    os.chdir('../../../../Graphics')
+    plt.savefig(file_name, format='svg')
+    os.chdir('..\\' + data_dir + '\\' + partial_pol)
 
 # now make inset graphs
 plt.figure(4)
 
-min_angle= 80
-max_angle = 90
-partial_pol_fig(plt.gca(), partial_dops_err, pol_angles2, partial_dops, min_angle, max_angle)
+min_angle= 40
+max_angle = 50
+partial_pol_fig(plt.gca(), partial_dops_err[::N], pol_angles2[::N], partial_dops[::N], min_angle, max_angle)
+
+if save_fig:
+    file_name = 'partial_pol_inset1.svg'
+    os.chdir('../../../../Graphics')
+    plt.savefig(file_name, format='svg')
+    os.chdir('..\\' + data_dir + '\\' + partial_pol)
+
+plt.show()
+
 
 #plt.xlabel('$\Theta_{LP} (\circ)$', fontsize='12', fontname='Sans Serif')
 #plt.ylabel('Degree of Polarization (DOP)', fontsize='12')

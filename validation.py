@@ -1,28 +1,25 @@
-"""
-Created on Wed Jun 21 09:42:59 2017
-
-This is a script to analyze polarimetry calibration data.
-
-@contributors: Noah, Ruoping
-"""
-
 import csv, os, pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
 from sys import platform
-from scipy.optimize import curve_fit
+from scipy.stats import circmean
+from scipy import stats as stats
 
 polarimeter_file = 'polarimeter.txt' #polarimeter data file
-DOP_CUTOFF=0.5
+DOP_CUTOFF=0
+
+#os.chdir('../../../..')
 
 #instrument matrix from calibration
 if 'linux' in platform:
-    directory='acquisition/data/calibration6/comparison' #data location folder
+    directory='acquisition/data/calibration4/comparison' #data location folder
     os.chdir(directory)
     Ainv=np.loadtxt('../Ainv.txt')
     Ainv_cov=pickle.load(open( "../Ainv_cov.p", "rb" ))
 else:
-    directory='acquisition\\data\\calibration4\\comparison' #data location folder
+    directory='acquisition\\data\\calibration1\\comparison1.2' #data location folder
     os.chdir(directory)
     Ainv=np.loadtxt('..\\Ainv.txt')
     Ainv_cov=pickle.load(open( "..\\Ainv_cov.p", "rb" ))
@@ -142,7 +139,7 @@ cov_m = np.array(cov_m)  # cov_m is a list of covariance matrices
 metasurface_data = np.array(metasurface_data)
 
 ###############################################################
-#%% Analyzing and plotting comparison
+# Analyzing and plotting comparison
 
 for i in range(len(metasurface_data)):
     metasurface_data[i] = np.dot(Ainv, metasurface_data[i].transpose())
@@ -205,6 +202,51 @@ plt.show()
 ##############################################################
 #plotting code
 
+savefig = 0
+f_name = 'comparison_graph'
+
+my_dpi = 192
+
+# histogram parameters
+histogram_color = (0,1,0, 0.5)
+fit_line_width = 5
+legend_size = 15
+
+# inset plotting parameters
+xmin_dop = 0.6
+xmax_dop = 0.68
+ymin_dop = 0.6
+ymax_dop = 0.68
+
+xmin_azimuth = 1.5
+xmax_azimuth = 2
+ymin_azimuth = 1.5
+ymax_azimuth = 2
+
+xmin_altitude = -0.25
+xmax_altitude = 0
+ymin_altitude = -0.25
+ymax_altitude = 0
+
+fig_x = 20
+fig_y = 2/3*fig_x
+
+edge_color = "0.0"
+zoom = 6
+location = 4 # lower right corner
+
+# scatter plot parameters
+scatter_color = 'red'
+scatter_weight = 4
+line_weight = 1  # weight of the one-to-one line
+line_color = 'black'
+line_alpha = 1
+scatter_alpha = 1
+label_size = 16
+eline_width = 0.5
+cap_size = 2
+
+
 #poincare sphere coordinates in radians
 # azimuth psi
 m_2psi=np.arctan2(S2, S1)
@@ -257,61 +299,246 @@ p_2chi=data_arr[9]
 m_2chi_err=data_arr[10]
 p_2chi_err=data_arr[11]
 
-
-f, axarr  = plt.subplots(2,3)
-axarr[0][0].scatter(p_dops, m_dops,alpha=0.5,s=2)#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
-axarr[0][0].errorbar(p_dops, m_dops, xerr=p_dops_err, yerr=m_dops_err, alpha=0.5, fmt=' ')#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
-axarr[0][0].plot([0,1],[0,1],alpha=0.75,color='black')
-axarr[0][0].set_title('DOP')
-axarr[0][0].set_xlabel('Polarimeter measurement')
-axarr[0][0].set_ylabel('Metasurface measurement')
-axarr[0][0].set_xlim([-0.1,1.1])
-axarr[0][0].set_ylim([-0.1,1.1])
-
-diffs=m_dops-p_dops  # relative dop error
-axarr[1][0].hist(diffs, bins=np.arange(min(diffs), max(diffs) + 0.005, 0.005))
-axarr[1][0].axvline(0.0,color='black', alpha=0.25)
-#axarr[1][0].set_title('DOP error metasurface-polarimeter')
-
 #fixing small line segment
 for i in range(len(m_2psi)):
     if m_2psi[i] < -2 and p_2psi[i] > 2:
         m_2psi[i]=m_2psi[i]+2*np.pi
 
-axarr[0][1].scatter(p_2psi, m_2psi, alpha=0.5, s=2.)#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
-axarr[0][1].errorbar(p_2psi, m_2psi, xerr=p_2psi_err, yerr=m_2psi_err, alpha=0.5, fmt=' ')#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
-#axarr[0][1].plot([np.min(p_2psi), np.max(p_2psi)],[np.min(p_2psi),np.max(p_2psi)],alpha=0.75,color='black')
-axarr[0][1].set_title('Azimuth $2\psi$')
-axarr[0][1].set_xlabel('Polarimeter measurement (radians)')
-axarr[0][1].set_ylabel('Metasurface measurement (radians)')
-axarr[0][1].set_xlim([-1.1*np.pi,1.1*np.pi])
-axarr[0][1].set_ylim([-1.1*np.pi,1.1*np.pi])
+# shift points due to azimuth offset
+diffs = m_2psi - p_2psi
+p_2psi = p_2psi + circmean(diffs, high=np.pi, low=-np.pi)
+p_2psi = p_2psi + 2*np.pi*(p_2psi < -np.pi)
+# now correct positions of weird outlying points - using * as elementwise and
+m_2psi = m_2psi + 2*np.pi*((m_2psi<0)*(p_2psi>0))
+m_2psi = m_2psi + 2*np.pi*((m_2psi>0)*(p_2psi<0))
+# recalculate diffs for histogram
+diffs = np.mod(m_2psi - p_2psi + np.pi, 2*np.pi) - np.pi
+# now remove points whose error bars are inordinately large
+mask1 = np.logical_and((p_2psi_err < 3*np.mean(p_2psi_err)), (m_2psi_err <    3*np.mean(m_2psi_err)))
+mask2 = np.logical_and((m_dops_err<3*np.mean(m_dops_err)), (p_dops_err<    3*np.mean(p_dops_err)))
+mask = np.logical_and(mask1, mask2)
+diffs = diffs[mask]
+m_2psi = m_2psi[mask]
+p_2psi = p_2psi[mask]
+m_2psi_err = m_2psi_err[mask]
+p_2psi_err = p_2psi_err[mask]
+m_2chi = m_2chi[mask]
+p_2chi = p_2chi[mask]
+m_2chi_err = m_2chi_err[mask]
+p_2chi_err = p_2chi_err[mask]
+m_dops = m_dops[mask]
+p_dops = p_dops[mask]
+m_dops_err = m_dops_err[mask]
+p_dops_err = p_dops_err[mask]
 
-#diffs=(m_2psi-p_2psi)/(0.5*(m_2psi+p_2psi))
-diffs=m_2psi-p_2psi
-axarr[1][1].hist(diffs,bins=np.arange(min(diffs), max(diffs) + 0.01, 0.01))
-axarr[1][1].axvline(0.0,color='black', alpha=0.25)
-#fitting line to 2psi
-az_offset=np.mean(diffs)
-axarr[0][1].plot([-np.pi,np.pi],[-np.pi+az_offset, np.pi+az_offset], color='black')
+# having cleaned up the data, we plot the results for dop, chi, and psi
+# plot the dop data
+
+def plot00(ax):
+    ax.plot([0,1],[0,1],alpha=line_alpha,color=line_color, linewidth=line_weight)
+    ax.scatter(p_dops, m_dops,alpha=scatter_alpha,s=scatter_weight, color=scatter_color)
+    ax.errorbar(p_dops, m_dops, yerr=m_dops_err, alpha=scatter_alpha, fmt=' ', color=scatter_color, elinewidth = eline_width, capthick = eline_width, capsize = cap_size)
+    #axarr[0][0].set_title('DOP')
+    #axarr[0][0].set_xlabel('Polarimeter measurement')
+    #axarr[0][0].set_ylabel('Metasurface measurement')
+    ax.set_xlim([-0.1,1.1])
+    ax.set_ylim([-0.1,1.1])
+    ax.tick_params(labelsize=label_size)
+
+    # create a zoomed inset of the data
+    axins_dop = zoomed_inset_axes(ax, zoom, loc=location)
+    axins_dop.plot([-np.pi,np.pi],[-np.pi, np.pi], color=line_color, alpha=line_alpha, linewidth=line_weight)
+    axins_dop.scatter(p_dops, m_dops, alpha=scatter_alpha, s=scatter_weight, color=scatter_color)
+    axins_dop.errorbar(p_dops, m_dops, yerr=m_dops_err, alpha=scatter_alpha, fmt=' ', color=scatter_color,elinewidth = eline_width, capsize = cap_size)
+    x1, x2, y1, y2 = xmin_dop, xmax_dop, ymin_dop, ymax_dop
+    axins_dop.set_xlim(x1, x2) # apply the x-limits
+    axins_dop.set_ylim(y1, y2) # apply the y-limits
+    mark_inset(ax, axins_dop, loc1=2, loc2=1, fc="none", ec=edge_color)
+    axins_dop.set_xticklabels([])
+    axins_dop.set_yticklabels([])
+
+def plot10(ax):
+    # plot a histogram
+    diffs=m_dops-p_dops
+    n, bins, patches = ax.hist(diffs, bins=np.linspace(min(diffs), max(diffs) + 0.005, np.sqrt(len(diffs))), facecolor = histogram_color)
+    ax.axvline(0.0,color='black', alpha=0.25)
+    (mu, sigma) = stats.norm.fit(diffs)
+    sample = np.linspace(min(bins), max(bins), 200)
+    y = mlab.normpdf(sample, mu, sigma)
+    ax.plot(sample, len(diffs)*(bins[1]-bins[0])*y, 'r--', linewidth=fit_line_width, label= '$\mu=%.3f$\n$\sigma=%.3f $'%(mu, sigma))
+    ax.legend(prop={'size': legend_size})
+    ax.tick_params(labelsize=label_size)
+    xticks = ax.get_xticks()
+    ax.set_xticks(xticks[::2])
+
+# move on to azimuth
+
+def plot01(ax):
+    ax.plot([-np.pi,np.pi],[-np.pi, np.pi], color=line_color, alpha=line_alpha, linewidth=line_weight)
+    ax.scatter(p_2psi, m_2psi, alpha=scatter_alpha, s=scatter_weight, color=scatter_color)
+    ax.errorbar(p_2psi, m_2psi, yerr=m_2psi_err, alpha=scatter_alpha, fmt=' ', color=scatter_color, elinewidth = eline_width, capthick = eline_width, capsize = cap_size)
+    #axarr[0][1].set_title('Azimuth $2\chi$')
+    #axarr[0][1].set_xlabel('Polarimeter measurement (radians)')
+    #axarr[0][1].set_ylabel('Metasurface measurement (radians)')
+    ax.set_xlim([-1.1*np.pi,1.1*np.pi])
+    ax.set_ylim([-1.1*np.pi,1.1*np.pi])
+    ax.set_xticks([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+    ax.set_xticks([-3*np.pi/4, -np.pi/4, np.pi/4, 3*np.pi/4], minor=True)
+    ax.set_xticklabels(["-$\pi$", r"$-\frac{\pi}{2}$", "$0$", r"$\frac{\pi}{2}$", "$\pi$"], family='sans-serif', size=1.5*label_size)
+    ax.set_yticks([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+    ax.set_yticks([-3*np.pi/4, -np.pi/4, np.pi/4, 3*np.pi/4], minor=True)
+    ax.set_yticklabels(["-$\pi$", r"$-\frac{\pi}{2}$", "$0$", r"$\frac{\pi}{2}$", "$\pi$"], family='sans-serif', size=1.5*label_size)
+    
+    # create a zoomed inset of the data
+    
+    axins_az = zoomed_inset_axes(ax, zoom, loc=location)
+    axins_az.plot([-np.pi,np.pi],[-np.pi, np.pi], alpha=line_alpha,color=line_color, linewidth=line_weight)
+    axins_az.scatter(p_2psi, m_2psi, alpha=scatter_alpha, s=scatter_weight, color=scatter_color)
+    axins_az.errorbar(p_2psi, m_2psi, yerr=m_2psi_err, alpha=scatter_alpha, fmt=' ', color=scatter_color, elinewidth = eline_width, capthick = eline_width, capsize = cap_size)
+    x1, x2, y1, y2 = xmin_azimuth, xmax_azimuth, ymin_azimuth, ymax_azimuth
+    axins_az.set_xlim(x1, x2) # apply the x-limits
+    axins_az.set_ylim(y1, y2) # apply the y-limits
+    mark_inset(ax, axins_az, loc1=2, loc2=1, fc="none", ec=edge_color)
+    axins_az.set_xticklabels([])
+    axins_az.set_yticklabels([])
+
+def plot11(ax):
+    # histogram
+    diffs = np.mod(m_2psi - p_2psi + np.pi, 2*np.pi) - np.pi
+    n, bins, patches = ax.hist(diffs, bins=np.linspace(min(diffs), max(diffs) + 0.005, np.sqrt(len(diffs))), facecolor=histogram_color)
+    ax.axvline(0.0,color='black', alpha=0.25)
+    (mu, sigma) = stats.norm.fit(diffs)
+    sample = np.linspace(min(bins), max(bins), 200)
+    y = mlab.normpdf(sample, mu, sigma)
+    ax.plot(sample, len(diffs)*(bins[1]-bins[0])*y, 'r--', linewidth=fit_line_width, label= '$\mu=%.3f$\n$\sigma=%.3f $'%(mu, sigma))
+    ax.legend(prop={'size': legend_size})
+    ax.axvline(0.0,color='black', alpha=0.25)
+    ax.tick_params(labelsize=label_size)
+
+
+# move on to altitude
 
 popt = np.polyfit(p_2chi, m_2chi, 1)
-if popt[0]<0:
+if popt[0]<0: # correct for RCP/LCP ambiguity
     m_2chi=-m_2chi
-    
-axarr[0][2].scatter(p_2chi, m_2chi, alpha=0.5,s=2)#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
-axarr[0][2].errorbar(p_2chi, m_2chi, xerr=p_2chi_err, yerr=m_2chi_err, alpha=0.5, fmt=' ')#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
-axarr[0][2].plot([np.min(p_2chi), np.max(p_2chi)],[np.min(p_2chi),np.max(p_2chi)],alpha=0.75,color='black')
-axarr[0][2].set_title('Altitude $2\chi$')
-axarr[0][2].set_xlabel('Polarimeter measurement (radians)')
-axarr[0][2].set_ylabel('Metasurface measurement (radians)')
-#diffs=(m_2chi-p_2chi)/(0.5*(m_2chi+p_2chi))
-diffs=m_2chi-p_2chi
-axarr[1][2].hist(diffs,bins=np.arange(min(diffs), max(diffs) + 0.01, 0.01))
-axarr[1][2].axvline(0.0,color='black', alpha=0.25)
 
+def plot02(ax):
+    ax.plot([-np.pi/2,np.pi/2],[-np.pi/2, np.pi/2], alpha=line_alpha,color=line_color, linewidth=line_weight)
+    ax.scatter(p_2chi, m_2chi, alpha=scatter_alpha,s=scatter_weight, color=scatter_color)#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
+    ax.errorbar(p_2chi, m_2chi, xerr=p_2chi_err, yerr=m_2chi_err, alpha=scatter_alpha, fmt=' ', color=scatter_color, elinewidth = eline_width, capthick=eline_width, capsize = cap_size)#,c=np.arange(0,len(polarimeter_dops)), cmap='viridis')
+    #axarr[0][2].set_title('Altitude $\phi$')
+    #axarr[0][2].set_xlabel('Polarimeter measurement (radians)')
+    #axarr[0][2].set_ylabel('Metasurface measurement (radians)')
+    ax.set_xlim([-1.1*np.pi/2,1.1*np.pi/2])
+    ax.set_ylim([-1.1*np.pi/2,1.1*np.pi/2])
+    ax.set_xticks([-np.pi/2, 0, np.pi/2])
+    ax.set_xticks([-np.pi/4, np.pi/4], minor=True)
+    ax.set_xticklabels([r"$-\frac{\pi}{2}$", "$0$", r"$\frac{\pi}{2}$"], family='sans-serif', size=1.5*label_size)
+    ax.set_yticks([-np.pi/2, 0, np.pi/2])
+    ax.set_yticks([-np.pi/4, np.pi/4], minor=True)
+    ax.set_yticklabels([r"$-\frac{\pi}{2}$", "$0$", r"$\frac{\pi}{2}$"], family='sans-serif', size=1.5*label_size)
+    
+    # create a zoomed inset of the data
+    
+
+    axins_alt = zoomed_inset_axes(ax, zoom, loc=4)
+    
+    axins_alt.scatter(p_2chi, m_2chi, alpha=scatter_alpha, s=scatter_weight, color=scatter_color)
+    axins_alt.errorbar(p_2chi, m_2chi, xerr=p_2chi_err, yerr=m_2chi_err, alpha=scatter_alpha, fmt=' ', color=scatter_color, elinewidth = eline_width, capthick = eline_width, capsize = cap_size)
+    x1, x2, y1, y2 = xmin_altitude, xmax_altitude, ymin_altitude, ymax_altitude
+    axins_alt.plot([x1, x2], [y1, y2], alpha=line_alpha,color=line_color, linewidth=line_weight)
+    axins_alt.set_xlim(x1, x2) # apply the x-limits
+    axins_alt.set_ylim(y1, y2) # apply the y-limits
+    mark_inset(ax, axins_alt, loc1=1, loc2=3, fc="none", ec=edge_color)
+    axins_alt.set_xticklabels([])
+    axins_alt.set_yticklabels([])
+
+
+def plot12(ax):
+    # plot a histogram
+    diffs=m_2chi-p_2chi
+    n, bins, patches = ax.hist(diffs, bins=np.linspace(min(diffs), max(diffs) + 0.005, np.sqrt(len(diffs))), facecolor = histogram_color)
+    ax.axvline(0.0,color='black', alpha=0.25)
+    (mu, sigma) = stats.norm.fit(diffs)
+    sample = np.linspace(min(bins), max(bins), 200)
+    y = mlab.normpdf(sample, mu, sigma)
+    l = ax.plot(sample, len(diffs)*(bins[1]-bins[0])*y, 'r--', linewidth=fit_line_width, label= '$\mu=%.3f$\n$\sigma=%.3f $'%(mu, sigma))
+    ax.legend(prop={'size': legend_size})
+    ax.axvline(0.0,color='black',alpha=0.25)
+    ax.tick_params(labelsize=label_size)
+
+# create a subplot figure for inspection
+f, axarr  = plt.subplots(2,3, figsize =(fig_x, fig_y))
+# plot on the individual axes
+plot00(axarr[0][0])
+plot01(axarr[0][1])
+plot10(axarr[1][0])
+plot11(axarr[1][1])
+plot02(axarr[0][2])
+plot12(axarr[1][2])
 plt.show()
 
+#%% Save the figure
+savefig=1
+new_dir = 'dataset_2'
+
+if savefig:
+    left = os.getcwd()
+    os.chdir('../../../..')
+    os.chdir('Graphics')
+    if not os.path.isdir(new_dir):
+        os.mkdir(new_dir)
+    os.chdir(new_dir)
+    fig00 = plt.figure(figsize = (fig_x/3, fig_y/2))
+    ax00 = fig00.gca()
+    plot00(ax00)
+    plt.savefig('fig00.pdf', dpi=my_dpi)
+    
+    fig01 = plt.figure(figsize = (fig_x/3, fig_y/2))
+    ax01 = fig01.gca()
+    plot01(ax01)
+    plt.savefig('fig01.pdf', dpi=my_dpi)
+    
+    fig10 = plt.figure(figsize = (fig_x/3, fig_y/2))
+    ax10 = fig10.gca()
+    plot10(ax10)
+    plt.savefig('fig10.pdf', dpi=my_dpi)
+
+    
+    fig11 = plt.figure(figsize = (fig_x/3, fig_y/2))
+    ax11 = fig11.gca()
+    plot11(ax11)
+    plt.savefig('fig11.pdf', dpi=my_dpi)
+    
+    fig02 = plt.figure(figsize = (fig_x/3, fig_y/2))
+    ax02 = fig02.gca()
+    plot02(ax02)
+    plt.savefig('fig02.pdf', dpi=my_dpi)
+    
+    fig12 = plt.figure(figsize = (fig_x/3, fig_y/2))
+    ax12 = fig12.gca()
+    plot12(ax12)
+    plt.savefig('fig12.pdf', dpi=my_dpi)
+    
+    os.chdir(left)
+
+#if savefig:
+#    left = os.getcwd()
+#    os.chdir('../../../..')
+#    os.chdir('Graphics')
+#    if not os.path.isdir(new_dir):
+#        os.mkdir(new_dir)
+#    os.chdir(new_dir)
+#    for i in range(3):
+#        for j in range(2):
+#            curr_ax = axarr[j][i]
+#            extent = curr_ax.get_window_extent().transformed(f.dpi_scale_trans.inverted())
+#            f_name_mod = f_name + str(j) + str(i) + '.png'
+#            plt.savefig(f_name_mod, transparent=False,  bbox_inches=extent.expanded(1.2, 1.2))
+#    os.chdir(left)
+
+
+#%% Poincare sphere plots
 #############################################################################
 # plotting on Poincare sphere
 
@@ -338,7 +565,7 @@ class Arrow3D(FancyArrowPatch):
 fig = plt.figure(figsize=plt.figaspect(1.))
 ax = fig.add_subplot(111, projection='3d')
 
-def plot_sphere(ax,arrows='xyz',equatorial=True):
+def plot_sphere(ax,arrows='xyz', equatorial=True):
     phi = np.linspace(0, np.pi, 200)
     theta = np.linspace(0, 2*np.pi, 200)
 
@@ -375,10 +602,11 @@ def plot_sphere(ax,arrows='xyz',equatorial=True):
 
 plot_sphere(ax)
 # Plotting selected datapoints
-npoints=3
+npoints=50
 dpoints=[]
 for n in range(npoints):
     dpoints.append(int(random.random()*len(m_dops)))
+
 dpoints=np.array(dpoints)
 
 for n in range(npoints):
@@ -407,8 +635,8 @@ for n in range(npoints):
     ax.plot(x,y,z, lw=0.25, color='blue', alpha=1)
     
     S3=np.sin(p_2chi[dpoints[n]])
-    S2=np.sin(p_2psi[dpoints[n]]+az_offset)*np.cos(p_2chi[dpoints[n]])
-    S1=np.cos(p_2psi[dpoints[n]]+az_offset)*np.cos(p_2chi[dpoints[n]])
+    S2=np.sin(p_2psi[dpoints[n]])*np.cos(p_2chi[dpoints[n]])
+    S1=np.cos(p_2psi[dpoints[n]])*np.cos(p_2chi[dpoints[n]])
     ax.add_artist(Arrow3D([0, S1/np.linalg.norm([S1,S2,S3])],
                           [0, S2/np.linalg.norm([S1,S2,S3])],
                           [0, S3/np.linalg.norm([S1,S2,S3])], mutation_scale=5,
@@ -445,28 +673,29 @@ ax2 = fig.add_subplot(1,2,2, projection='3d')
 plot_sphere(ax2, arrows='xy', equatorial=False)
 
 # Plotting selected datapoints
-npoints=20
+npoints=200
 dpoints=[]
 for n in range(npoints):
     dpoints.append(int(random.random()*len(m_dops)))
 dpoints=np.array(dpoints)
-    
+
+size = 3
 for n in range(npoints):
     S3=np.sin(m_2chi[dpoints[n]])
     S2=np.sin(m_2psi[dpoints[n]])*np.cos(m_2chi[dpoints[n]])
     S1=np.cos(m_2psi[dpoints[n]])*np.cos(m_2chi[dpoints[n]])
     if S3 >=0:
-        ax.scatter(S1, S2, S3, color='blue', s=0.5)
+        ax.scatter(S1, S2, S3, color='blue', s=size)
     if S3 <=0:
-        ax2.scatter(S1, S2, S3, color='blue', s=0.5)
+        ax2.scatter(S1, S2, S3, color='blue', s=size)
         
     S3=np.sin(p_2chi[dpoints[n]])
     S2=np.sin(p_2psi[dpoints[n]])*np.cos(p_2chi[dpoints[n]])
     S1=np.cos(p_2psi[dpoints[n]])*np.cos(p_2chi[dpoints[n]])
     if S3 >=0:        
-        ax.scatter(S1, S2, S3, color='orange', s=0.5)
+        ax.scatter(S1, S2, S3, color='orange', s=size)
     if S3 <=0:        
-        ax2.scatter(S1, S2, S3, color='orange', s=0.5)
+        ax2.scatter(S1, S2, S3, color='orange', s=size)
 
 #mesh on sphere
 for phi in [np.pi/2, (np.pi/2)/3, 2*(np.pi/2)/3]:
