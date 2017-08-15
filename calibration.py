@@ -23,23 +23,13 @@ partial_pol = 'partial_pol8'  # folder location of partial pol data
 
 power_meter_error = 0.001 #Error in power meter reading from ambient light, unit in mW
 
-data_dir = 'acquisition\data\calibration1'
 
-<<<<<<< HEAD
 if 'linux' in sys.platform:
     data_dir = 'acquisition/data/calibration6'
 else:
-    data_dir = 'acquisition\data\calibration6'
-=======
-if 'linux' in platform:
-    os.chdir('acquisition/data/calibration4')
-else:
-    os.chdir(data_dir)
+    data_dir = 'acquisition\\data\\incident_angles_calibration\\20deg'
 
->>>>>>> 2c3fb4f6f749c296469a35da75ed5f78cfab75e7
-
-
-#os.chdir(data_dir)
+os.chdir(data_dir)
 
 
 #%% Collect some error analysis functions
@@ -289,7 +279,7 @@ def linear_cal_fig(axes, yerror, xdata, ydata, min_angle, max_angle):
     return fit_errs
 
 
-save_fig = 1
+save_fig = 0
 
 # now plot it
 min_angle = 0

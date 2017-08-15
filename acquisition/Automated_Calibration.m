@@ -1,6 +1,6 @@
 %% Specify values in absolute coordinates for polarization optics.
 clear;
-foldername='calibration8';
+foldername='incident_angles_calibration\20deg';
 mkdir(['C:\Users\User\Desktop\Polarimeter Project\metasurface_polarimetry\acquisition\data\', foldername]);
 pol_hor = 0.0; %Reference polarizer position
 %last_polarizer_at_45 = 105;
@@ -13,8 +13,8 @@ serial_rotation_stage = 83839448; % serial number of 2nd rotation mount
 global limit_in_beam
 global limit_out_beam
 
-limit_in_beam = 0.0; % point at which power meter is in the beam
-limit_out_beam = 0.75;% point at which the power meter is out of the beam
+limit_in_beam = 1.05; % point at which power meter is in the beam
+limit_out_beam = 0.0;% point at which the power meter is out of the beam
 
 addpath('..');
 fpos    = get(0,'DefaultFigurePosition'); % figure default position
