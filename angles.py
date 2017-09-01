@@ -12,7 +12,7 @@ from matplotlib.colors import LightSource
 import random
 
 if 'linux' in sys.platform:
-    directory = 'acquisition/data/big_metasurface'
+    directory = 'acquisition/data/small_metasurfaces/angles/top4left1'
 else:
     directory = 'acquisition\\data\\small_metasurfaces\\angles\\top4left1'
 
@@ -20,6 +20,10 @@ subdirs = ['order-2', 'order-1']
 #angledirs = ['-40dgr','-38dgr','-36dgr','-34dgr','-32dgr','-30dgr','-28dgr','-26dgr','-24dgr','-22dgr','-20dgr','-18dgr','-16dgr','-14dgr','-12dgr','-10dgr','-8dgr','-6dgr','-4dgr','-2dgr','0dgr', '2dgr','4dgr','6dgr','8dgr','10dgr','12dgr','14dgr','16dgr','18dgr','20dgr','22dgr','24dgr','26dgr','28dgr','30dgr','32dgr','34dgr','36dgr','38dgr','40dgr']
 angledirs = ['-40dgr','-36dgr','-32dgr','-28dgr','-24dgr','-20dgr','-16dgr','-12dgr','-8dgr','-4dgr',
              '0dgr','4dgr','8dgr','12dgr','16dgr','20dgr','24dgr','28dgr','32dgr','36dgr','40dgr']
+
+#angledirs = ['-20dgr','-16dgr','-12dgr','-8dgr','-4dgr',
+ #            '0dgr','4dgr','8dgr','12dgr','16dgr','20dgr']
+
 os.chdir(directory)
 
 ####################################################################

@@ -14,7 +14,7 @@ DOP_CUTOFF=0
 
 #instrument matrix from calibration
 if 'linux' in platform:
-    directory='acquisition/data/calibration4/comparison' #data location folder
+    directory='acquisition/data/calibration1/comparison1.2' #data location folder
     os.chdir(directory)
     Ainv=np.loadtxt('../Ainv.txt')
     Ainv_cov=pickle.load(open( "../Ainv_cov.p", "rb" ))
@@ -25,7 +25,6 @@ else:
     Ainv_cov=pickle.load(open( "..\\Ainv_cov.p", "rb" ))
 
 N_measurements=len(os.listdir())-1 #number of measurements which have been taken
-
 #https://www.ruhr-uni-bochum.de/ika/forschung/forschungsbereich_kolossa/Daten/Buchkapitel_Uncertainty.pdf
 
 def covS(i,j, D, I, Dcov, Icov):
@@ -188,9 +187,7 @@ m_dops_err=np.sqrt((dS0*np.sqrt(S1**2+S2**2+S3**2)/S0**2)**2
                    +2*cov_S0_S3*(-S3/S0**3)
                    +2*cov_S2_S1*(S2*S1/(S0**2 * (S1**2+S2**2+S3**2)))
                    +2*cov_S3_S1*(S3*S1/(S0**2 * (S1**2+S2**2+S3**2)))
-                   +2*cov_S3_S2*(S3*S2/(S0**2 * (S1**2+S2**2+S3**2)))
-                   )
-
+                   +2*cov_S3_S2*(S3*S2/(S0**2 * (S1**2+S2**2+S3**2))))
 
 plt.errorbar(range(0,len(fnames)),m_dops, alpha=0.5, yerr=m_dops_err, label='metasurface',fmt='.')
 plt.errorbar(range(0,len(fnames)),p_dops, alpha=0.5, yerr=p_dops_err, label='thorlabs',fmt='.')
@@ -245,7 +242,6 @@ scatter_alpha = 1
 label_size = 16
 eline_width = 0.5
 cap_size = 2
-
 
 #poincare sphere coordinates in radians
 # azimuth psi
@@ -664,7 +660,6 @@ plt.show()
 
 #############################################################################
 # plotting hemispheres
-
 fig = plt.figure(figsize=plt.figaspect(0.5))
 ax = fig.add_subplot(1,2,1, projection='3d')
 plot_sphere(ax, arrows='xy', equatorial=False)
@@ -673,7 +668,7 @@ ax2 = fig.add_subplot(1,2,2, projection='3d')
 plot_sphere(ax2, arrows='xy', equatorial=False)
 
 # Plotting selected datapoints
-npoints=200
+npoints=20
 dpoints=[]
 for n in range(npoints):
     dpoints.append(int(random.random()*len(m_dops)))

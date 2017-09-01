@@ -13,7 +13,7 @@ import random
 
 if 'linux' in sys.platform:
     directory = 'acquisition/data/big_metasurface'
-    directory = 'acquisition/data/small_metasurfaces/top2_left3'
+    #directory = 'acquisition/data/small_metasurfaces/top4_left3'
 else:
     directory = 'acquisition\\data\\small_metasurfaces\\top5_left4'
 
@@ -185,14 +185,14 @@ if 'big_metasurface' in directory:
                        [1,2*np.sqrt(2)/3,0,1/3]])
     twopsi_d=np.array([0, -2*np.pi/3, 2*np.pi/3, np.pi])
     twochi_d=np.array([-np.pi/2, np.pi/6,np.pi/6, np.pi/6])
-if 'left1' or 'left2' in directory:
+elif 'left1' or 'left2' in directory:
     designed=np.array([[1,2*np.sqrt(2)/3,0,1/3],
                        [1,-np.sqrt(2)/3,np.sqrt(2/3),1/3],
                        [1,-np.sqrt(2)/3,-np.sqrt(2/3),1/3],
                        [1,0,0,-1]])
     twopsi_d=np.array([np.pi, 2*np.pi/3, -2*np.pi/3, 0])
     twochi_d=np.array([np.pi/6,np.pi/6, np.pi/6, -np.pi/2]) 
-if 'left3' or 'left4' in directory:
+elif 'left3' or 'left4' in directory:
     designed=np.array([[1,0,-1,0.01],
                        [1,0,0,1],
                        [1,0,0,-1],
@@ -248,11 +248,11 @@ for meas in [data_thorlabs,measured_stokes,designed]:
         yy=x*np.sin(0.5*twopsi)+y*np.cos(0.5*twopsi)
 
         if meas.all==data_thorlabs.all:
-            p.append(axarr[0][i].plot(xx,yy,'-',alpha=0.8, label='Thorlabs measurement')[0])
+            p.append(axarr[0][i].plot(xx,yy,'-',alpha=0.5, label='Thorlabs measurement')[0])
         elif meas.all==measured_stokes.all:
-            p.append(axarr[0][i].plot(xx,yy,'--',alpha=0.8, label='Time-sequential measurement')[0])
+            p.append(axarr[0][i].plot(xx,yy,'--',alpha=0.5, label='Time-sequential measurement')[0])
         elif meas.all==designed.all:
-            p.append(axarr[0][i].plot(xx,yy,'--',alpha=0.8, label='Designed states')[0])
+            p.append(axarr[0][i].plot(xx,yy,'--',alpha=0.5, label='Designed states')[0])
             
         axarr[0][i].set_xlim([-1.1,1.1])
         axarr[0][i].set_ylim([-1.1,1.1])
@@ -260,14 +260,18 @@ for meas in [data_thorlabs,measured_stokes,designed]:
         #find ang
 
         if abs(el) > 0.05 and (meas.all==data_thorlabs.all or meas.all==designed.all):
+            if meas.all==data_thorlabs.all:
+                color='blue'
+            if meas.all==designed.all:
+                color='green'                
             axarr[0][i].arrow(xx[3*len(xx)//8-10], yy[3*len(yy)//8-10],
                            np.sign(S3[i])*(xx[3*len(xx)//8+10]-xx[3*len(xx)//8]),
                            np.sign(S3[i])*(yy[3*len(yy)//8+10]-yy[3*len(xx)//8]),
-                           head_width=0.1, head_length=0.2, linewidth=0., alpha=.8)
+                           head_width=0.1, head_length=0.2, linewidth=0., alpha=.5, color=color)
             axarr[0][i].arrow(xx[7*(len(xx)//8-10)], yy[7*(len(yy)//8-10)],
                            np.sign(S3[i])*(xx[7*(len(xx)//8)+10]-xx[7*(len(xx)//8)]),
                            np.sign(S3[i])*(yy[7*(len(yy)//8)+10]-yy[7*(len(xx)//8)]),
-                           head_width=0.1, head_length=0.2, linewidth=0., alpha=.8)
+                           head_width=0.1, head_length=0.2, linewidth=0., alpha=.5,color=color)
     n+=1
     if err>0.00000001:
         print('Error with respect to designed', err)
@@ -276,6 +280,12 @@ for meas in [data_thorlabs,measured_stokes,designed]:
 plt.figlegend([p[0],p[4],p[8]],
            ['Thorlabs measurement','Time-sequential measurement','Designed states'],
            loc='lower center')
+for a in range(len(axarr[1])):
+    for b in range(len(axarr)):
+        axarr[b][a].set_yticks([])
+        axarr[b][a].set_xticks([])
+
+        
 axarr[1][0].axis('off')
 axarr[1][1].axis('off')
 axarr[1][2].axis('off')

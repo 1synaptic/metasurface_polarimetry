@@ -25,7 +25,7 @@ power_meter_error = 0.001 #Error in power meter reading from ambient light, unit
 
 
 if 'linux' in sys.platform:
-    data_dir = 'acquisition/data/calibration6'
+    data_dir = 'acquisition/data/calibration4'
 else:
     data_dir = 'acquisition\\data\\incident_angles_calibration\\20deg'
 
@@ -394,10 +394,10 @@ for i in range(2):
         pd3R_err = np.std(qwp_err(pd3_voltageQR))
         pd4R_err = np.std(qwp_err(pd4_voltageQR))
         
-        plt.errorbar(pol_anglesR, pd1_voltageQR, yerr=pd1_voltage_err, fmt=' ', color='red')
-        plt.errorbar(pol_anglesR,pd2_voltageQR, yerr=pd2_voltage_err, fmt=' ', color='blue')
-        plt.errorbar(pol_anglesR, pd3_voltageQR, yerr=pd3_voltage_err, fmt=' ', color='green')
-        plt.errorbar(pol_anglesR, pd4_voltageQR,yerr=pd4_voltage_err, fmt=' ', color='orange')
+        plt.errorbar(pol_anglesR, pd1_voltageQR, yerr=pd1_voltage_err, fmt='.', color='red')
+        plt.errorbar(pol_anglesR,pd2_voltageQR, yerr=pd2_voltage_err, fmt='.', color='blue')
+        plt.errorbar(pol_anglesR, pd3_voltageQR, yerr=pd3_voltage_err, fmt='.', color='green')
+        plt.errorbar(pol_anglesR, pd4_voltageQR,yerr=pd4_voltage_err, fmt='.', color='orange')
         #print(len(pd1_voltageQR))
     elif i == 1:
         pd1L = np.mean(pd1_voltageQR)
@@ -408,10 +408,10 @@ for i in range(2):
         pd2L_err = np.std(qwp_err(pd2_voltageQR))
         pd3L_err = np.std(qwp_err(pd3_voltageQR))
         pd4L_err = np.std(qwp_err(pd4_voltageQR))
-        plt.errorbar(pol_anglesR, pd1_voltageQR, yerr=pd1_voltage_err, fmt=' ', color='red', alpha=0.5)
-        plt.errorbar(pol_anglesR, pd2_voltageQR, yerr=pd2_voltage_err, fmt=' ', color='blue', alpha=0.5)
-        plt.errorbar(pol_anglesR, pd3_voltageQR, yerr=pd3_voltage_err, fmt=' ', color='green', alpha=0.5)
-        plt.errorbar(pol_anglesR, pd4_voltageQR, yerr=pd4_voltage_err, fmt=' ', color='orange', alpha=0.5)
+        plt.errorbar(pol_anglesR, pd1_voltageQR, yerr=pd1_voltage_err, fmt='.', color='red', alpha=0.5)
+        plt.errorbar(pol_anglesR, pd2_voltageQR, yerr=pd2_voltage_err, fmt='.', color='blue', alpha=0.5)
+        plt.errorbar(pol_anglesR, pd3_voltageQR, yerr=pd3_voltage_err, fmt='.', color='green', alpha=0.5)
+        plt.errorbar(pol_anglesR, pd4_voltageQR, yerr=pd4_voltage_err, fmt='.', color='orange', alpha=0.5)
         #print(len(pd1_voltageQR))
 plt.show()
 
@@ -445,12 +445,12 @@ print('')
 
 # save the instrument matrix as a text file for use in other scripts
 
-#if 'linux' in platform:
-    #np.savetxt('../Ainv.txt', Ainv)
-#else:
-    #np.savetxt('..\\Ainv.txt', Ainv)
+if 'linux' in sys.platform:
+    np.savetxt('../Ainv.txt', Ainv)
+else:
+    np.savetxt('..\\Ainv.txt', Ainv)
 
-np.savetxt('..\\Ainv.txt', Ainv)
+#np.savetxt('..\\Ainv.txt', Ainv)
 
 #Error in Ainv (see https://arxiv.org/pdf/hep-ex/9909031.pdf, http://sci-hub.io/10.1364/ao.47.002541)
 #Ainv_err=np.abs(np.dot(np.dot(Ainv, A_err),Ainv)) #need to change starting here
